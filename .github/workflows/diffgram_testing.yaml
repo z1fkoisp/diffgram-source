@@ -1,22 +1,24 @@
 name: Diffgram Testing Workflow
-on:
+'on':
   push:
     branches:
-      - 'main'
-      - 'master'
-      - 'releases/**'
-      - 'fix/**'
+    - main
+    - master
+    - releases/**
+    - fix/**
   pull_request_target:
-    types: [synchronize]
+    types:
+    - synchronize
     branches:
-      - '**'
+    - '**'
   pull_request:
-    types: [opened, synchronize, ready_for_review]
+    types:
+    - opened
+    - synchronize
+    - ready_for_review
 jobs:
   Default-Service-Unit-Tests:
-    runs-on: ubuntu-20.04
-    # Service containers to run with `container-job` test
-
+    runs-on: ubuntu-latest
     container:
       image: python:3.11.1-bullseye
       options: --user root
@@ -37,62 +39,57 @@ jobs:
         SERVICE_ACCOUNT_FULL_PATH: /gcp/gcloud-service-key.json
         DOCKER_CONTEXT: true
     services:
-      # Label used to access the service container
       postgres:
-        # Docker Hub image
         image: postgres
-        # Provide the password for postgres
         env:
           POSTGRES_PASSWORD: postgres
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/setup-python@v3
-        with:
-          python-version: '3.11'
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - uses: mdecoleman/pr-branch-name@1.2.0
-        if: "github.event.pull_request != null"
-        id: vars
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: echo ${{ steps.vars.outputs.branch }}
-        if: "github.event.pull_request != null"
-      - name: Check out repository code
-        if: "github.event.pull_request != null"
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ steps.vars.outputs.branch }}
-      - name: Check out repository code
-        if: "github.event.pull_request == null"
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ github.ref_name }}
-
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: cp -rf . /__w/diffgram
-      - run: cd /__w/diffgram
-
-      - run: pip3 install --upgrade pip
-      - run: pip3 install -r default/requirements.txt
-      - run: pip3 install pytest sqlalchemy-utils
-      - run: mkdir /gcp
-      - run: echo ${{ secrets.GOOGLE_SERVICE_ACCOUNT_ENCODED }} | base64 --decode --ignore-garbage > /gcp/gcloud-service-key.json
-      - run: pytest default/tests --junitxml=test-results/junit.xml
-      - name: Publish Default Service Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v1
-        if: always()
-        with:
-          files: test-results/**/*.xml
+    - uses: actions/setup-python@v3
+      with:
+        python-version: '3.11'
+    - run: "echo \"\U0001F389 The job was automatically triggered by a ${{ github.event_name\
+        \ }} event.\""
+    - run: "echo \"\U0001F427 This job is now running on a ${{ runner.os }} server\
+        \ hosted by GitHub!\""
+    - run: "echo \"\U0001F50E The name of your branch is ${{ github.ref }} and your\
+        \ repository is ${{ github.repository }}.\""
+    - uses: mdecoleman/pr-branch-name@1.2.0
+      if: github.event.pull_request != null
+      id: vars
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+    - run: echo ${{ steps.vars.outputs.branch }}
+      if: github.event.pull_request != null
+    - name: Check out repository code
+      if: github.event.pull_request != null
+      uses: actions/checkout@v2
+      with:
+        ref: ${{ steps.vars.outputs.branch }}
+    - name: Check out repository code
+      if: github.event.pull_request == null
+      uses: actions/checkout@v2
+      with:
+        ref: ${{ github.ref_name }}
+    - run: "echo \"\U0001F4A1 The ${{ github.repository }} repository has been cloned\
+        \ to the runner.\""
+    - run: cp -rf . /__w/diffgram
+    - run: cd /__w/diffgram
+    - run: pip3 install --upgrade pip
+    - run: pip3 install -r default/requirements.txt
+    - run: pip3 install pytest sqlalchemy-utils
+    - run: mkdir /gcp
+    - run: echo ${{ secrets.GOOGLE_SERVICE_ACCOUNT_ENCODED }} | base64 --decode --ignore-garbage
+        > /gcp/gcloud-service-key.json
+    - run: pytest default/tests --junitxml=test-results/junit.xml
+    - name: Publish Default Service Test Results
+      uses: EnricoMi/publish-unit-test-result-action@v1
+      if: always()
+      with:
+        files: test-results/**/*.xml
   Walrus-Service-Unit-Tests:
-    runs-on: ubuntu-20.04
-    # Service containers to run with `container-job`
+    runs-on: ubuntu-latest
     container:
       image: ubuntu:22.04
       options: --user root
@@ -112,94 +109,96 @@ jobs:
         DIFFGRAM_INSTALL_FINGERPRINT: ${{ secrets.DIFFGRAM_INSTALL_FINGERPRINT }}
         SERVICE_ACCOUNT_FULL_PATH: /gcp/gcloud-service-key.json
         CRYPTOGRAPHY_DONT_BUILD_RUST: 1
-
     services:
-      # Label used to access the service container
       postgres:
-        # Docker Hub image
         image: postgres
-        # Provide the password for postgres
         env:
           POSTGRES_PASSWORD: postgres
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s
           --health-retries 5
-
     steps:
-      - uses: actions/setup-python@v3
-        with:
-          python-version: '3.11'
-      - run: apt-get update --allow-insecure-repositories && apt-get install -y git libffi-dev ffmpeg python3.11 python3-pip libpq-dev python3.11-venv python3.11-distutils python3.11-dev git python3-setuptools libgdal-dev python3-lxml libxslt-dev
-      - run: pip3 install --upgrade pip
-      - run: rm -rf /tmp
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - uses: mdecoleman/pr-branch-name@1.2.0
-        if: "github.event.pull_request != null"
-        id: vars
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: echo ${{ steps.vars.outputs.branch }}
-        if: "github.event.pull_request != null"
-      - name: Check out repository code
-        if: "github.event.pull_request != null"
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ steps.vars.outputs.branch }}
-      - name: Check out repository code
-        if: "github.event.pull_request == null"
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ github.ref_name }}
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: pwd
-      - run: cp -rf . /__w/diffgram
-      - run: cd /__w/diffgram
-      - run: cd walrus
-      - run: pip install -r walrus/requirements.txt
-      - run: pip install pytest sqlalchemy-utils
-      - run: mkdir /gcp
-      - run: echo ${{ secrets.GOOGLE_SERVICE_ACCOUNT_ENCODED }} | base64 --decode --ignore-garbage > /gcp/gcloud-service-key.json
-      - run: pytest walrus/tests --junitxml=test-results/junit.xml
-      - name: Publish Walrus Service Results
-        uses: EnricoMi/publish-unit-test-result-action@v1
-        if: always()
-        with:
-          files: test-results/**/*.xml
+    - uses: actions/setup-python@v3
+      with:
+        python-version: '3.11'
+    - run: apt-get update --allow-insecure-repositories && apt-get install -y git
+        libffi-dev ffmpeg python3.11 python3-pip libpq-dev python3.11-venv python3.11-distutils
+        python3.11-dev git python3-setuptools libgdal-dev python3-lxml libxslt-dev
+    - run: pip3 install --upgrade pip
+    - run: rm -rf /tmp
+    - run: "echo \"\U0001F389 The job was automatically triggered by a ${{ github.event_name\
+        \ }} event.\""
+    - run: "echo \"\U0001F427 This job is now running on a ${{ runner.os }} server\
+        \ hosted by GitHub!\""
+    - run: "echo \"\U0001F50E The name of your branch is ${{ github.ref }} and your\
+        \ repository is ${{ github.repository }}.\""
+    - uses: mdecoleman/pr-branch-name@1.2.0
+      if: github.event.pull_request != null
+      id: vars
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+    - run: echo ${{ steps.vars.outputs.branch }}
+      if: github.event.pull_request != null
+    - name: Check out repository code
+      if: github.event.pull_request != null
+      uses: actions/checkout@v2
+      with:
+        ref: ${{ steps.vars.outputs.branch }}
+    - name: Check out repository code
+      if: github.event.pull_request == null
+      uses: actions/checkout@v2
+      with:
+        ref: ${{ github.ref_name }}
+    - run: "echo \"\U0001F4A1 The ${{ github.repository }} repository has been cloned\
+        \ to the runner.\""
+    - run: pwd
+    - run: cp -rf . /__w/diffgram
+    - run: cd /__w/diffgram
+    - run: cd walrus
+    - run: pip install -r walrus/requirements.txt
+    - run: pip install pytest sqlalchemy-utils
+    - run: mkdir /gcp
+    - run: echo ${{ secrets.GOOGLE_SERVICE_ACCOUNT_ENCODED }} | base64 --decode --ignore-garbage
+        > /gcp/gcloud-service-key.json
+    - run: pytest walrus/tests --junitxml=test-results/junit.xml
+    - name: Publish Walrus Service Results
+      uses: EnricoMi/publish-unit-test-result-action@v1
+      if: always()
+      with:
+        files: test-results/**/*.xml
   Frontend-Unit-Tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v3
-        with:
-          node-version: "18"
-      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
-      - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
-      - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
-      - uses: mdecoleman/pr-branch-name@1.2.0
-        if: "github.event.pull_request != null"
-        id: vars
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: echo ${{ steps.vars.outputs.branch }}
-        if: "github.event.pull_request != null"
-      - name: Check out repository code
-        if: "github.event.pull_request != null"
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ steps.vars.outputs.branch }}
-      - name: Check out repository code
-        if: "github.event.pull_request == null"
-        uses: actions/checkout@v2
-        with:
-          ref: ${{ github.ref_name }}
-      - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
-      - run: cd frontend
-      - uses: actions/setup-node@v3
-        with:
-          node-version: "18"
-      - run: yarn --cwd frontend install
-      - run: yarn --cwd frontend run test:unit
+    - uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    - run: "echo \"\U0001F389 The job was automatically triggered by a ${{ github.event_name\
+        \ }} event.\""
+    - run: "echo \"\U0001F427 This job is now running on a ${{ runner.os }} server\
+        \ hosted by GitHub!\""
+    - run: "echo \"\U0001F50E The name of your branch is ${{ github.ref }} and your\
+        \ repository is ${{ github.repository }}.\""
+    - uses: mdecoleman/pr-branch-name@1.2.0
+      if: github.event.pull_request != null
+      id: vars
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+    - run: echo ${{ steps.vars.outputs.branch }}
+      if: github.event.pull_request != null
+    - name: Check out repository code
+      if: github.event.pull_request != null
+      uses: actions/checkout@v2
+      with:
+        ref: ${{ steps.vars.outputs.branch }}
+    - name: Check out repository code
+      if: github.event.pull_request == null
+      uses: actions/checkout@v2
+      with:
+        ref: ${{ github.ref_name }}
+    - run: "echo \"\U0001F4A1 The ${{ github.repository }} repository has been cloned\
+        \ to the runner.\""
+    - run: cd frontend
+    - uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    - run: yarn --cwd frontend install
+    - run: yarn --cwd frontend run test:unit
